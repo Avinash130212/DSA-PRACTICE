@@ -2,50 +2,22 @@
  * LeetCode 875: Koko Eating Bananas
  * https://leetcode.com/problems/koko-eating-bananas/
  *
- * CORE PATTERN: Binary Search on Answer
- *
- * This problem is presented in the form of  story which is eventually been decoded came to the idea of binary search by recoginsing the pattern
- * that search space includes invalid and valid answers .
- * instead of searching for the array index(classic binary search) we have been searching of the minimum value of k for which koko can eat
- * banans and eliminating the search space by calculating the time taken by each value of k and move accordingly 
- * 
- * Observation:
- * - Smaller K -> More hours required.
- * - Larger K -> Fewer hours required.
- *
- * This creates a monotonic search space:
- *
- *      Invalid        Valid
- *  ❌ ❌ ❌ ❌ ✅ ✅ ✅ ✅
- *              ^
- *      First valid answer
- *Since all invalid answers appear before all valid answers,
- *we can use binary search to locate the first valid K.
- * Our goal is to find the first valid K.
- *
- * SEARCH SPACE:
- * low  = 1
- * high = maximum pile size
- * why ?
- * 
- *The minimum possible eating speed is 1 banana/hour.
+ *  SEARCH SPACE:
+ * speed of eating banans in a hour so at least case we can think of is eating 1 banans and best case is given pile of banans in a hour which is possible when k is considered as max(arr) this takes at 1 hour for every pile which is minimum in our best case
+ * so now we have defined our search space and secondly we are not actaully finding for a target as of in a classic binary search comparing arr[mid] and moving accordingly here we are 
+ * computing time taken for each in the bound and moving it accordingly while eleminating one half as if we take a k that is taking more time than required so the values of k behing=d it are all eliminated as the values lesser than that will take evenn more time and no use as there is a monotonic trend
 
- * The maximum useful eating speed is the size of the largest pile.
- *   Any speed greater than the largest pile gives the same result because
- * Koko can finish every pile in one hour.
- but since we are searching for min k we are taking the maximum pile size as high 
- * CHECKER FUNCTION:
- * For every candidate K,
- *      totalHours += ceil(pile / K)
- *
- * If totalHours <= h,
- *      K is valid.
- * and we are trying to search for a better k by moving towards left and min is asked
- * Otherwise,
- *      K is invalid.
- * we have to eat in the valid time only so we should try to increase k value so that it can cover all the bananas in less time
- *  and hence we move right 
- *
+ *  CORE PATTERN:
+ * the question koko eating banans comes in the category of binary search on answers as firstly the search space is not the only array as of for classic binary search where we keep
+ * low = 0 and high = n-1 where n is the size of the array here search space might be chaning all the time depending on the fundamental constarinst
+ * since here when we keep each value of k it is in the form not working working and so no it is a sign of binary search space where the low is intailly in the not working place and high 
+ * is in working region after applying binary search in the end whta we observe is that they change their polairty which is low points to teh minimum working position which is our answer and high goes to not working so that is why we are retuning low here
+
+
+ *  CHECKER FUNCTION:
+ *  so this computes the number of hours taken by each k value and if it is in the bound in the sense it takes time less than or equal to actual required hours so we try to move left to search for a better answers
+ *  storing the present and if the computed time is more than actual required time we move towards right by increasing low, since we need a bigger k
+ * 
  * BINARY SEARCH TEMPLATE:
  *
  * while(low < high){

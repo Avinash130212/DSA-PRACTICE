@@ -1,149 +1,143 @@
 /*
- * LeetCode 1011: Capacity To Ship Packages Within D Days
- * https://leetcode.com/problems/capacity-to-ship-packages-within-d-days/
+ * LeetCode 1539: Kth Missing Positive Number
+ * https://leetcode.com/problems/kth-missing-positive-number/
  *
- * CORE PATTERN: Binary Search on Answer
+ * CORE PATTERN: Binary Search on Answer (Binary Search on Index)
  *
- * This problem is similar to Koko Eating Bananas and Smallest Divisor:
- * defining our search space is the first step we should be doing in these type of pattern problems
- * here the search space is slightly different from the koko eating bananas as we have a constranint that we should nt we splitiing the packages
- * so here the min cant be low as we cant transfer other packages so we have to keep a safe min that transfers all the weights irrespective of number of days taken 
- * so safer low is max(weights array) and high is sum(weights array) as that is the best case where we can transfer all the weights in a day 
- * obviously it might be more than that but since we are chceking for least best case so high should be sum(weights array)
- * So For every candidate capacity, we check the corresponding days needed
- * and move left or right accordingly.
+ * This problem is a bit different from Koko / Ship Capacity / Smallest
+ * Divisor — there we searched over a RANGE OF VALUES (capacity, divisor,
+ * eating speed). Here we search over the INDICES of the given array.
+ * as the requried element is not in the array so we cannot directly take the array itself as our search space.
+ * 
+ * arr is strictly increasing and only has positive integers, so we can
+ * binary search to find the boundary index where the kth missing number
+ * "lives," instead of scanning the array linearly.
  *
  * Observation:
- * - Smaller capacity -> more days needed (less fits per day).
- * - Larger capacity  -> fewer days needed (more fits per day).
+ * - If nothing were missing, arr[i] would always equal (i+1).
+ * - Whatever GAP exists between arr[i] and (i+1) IS exactly the count
+ *   of positive integers missing before arr[i].
+ *      missing_before(i) = arr[i] - (i + 1)
+ * - This "missing count" only grows or stays the same as i increases
+ *   (array is strictly increasing) -> monotonic -> binary search works.
  *
- * This creates a monotonic search space:
+ * This creates a monotonic search space over indices:
  *
- *      Invalid        Valid
- *  ❌ ❌ ❌ ❌ ✅ ✅ ✅ ✅
- *              ^
- *      First valid answer
+ *      missing < k        missing >= k
+ *  ❌ ❌ ❌ ❌ ❌        ✅ ✅ ✅ ✅
+ *                    ^
+ *          boundary we are searching for
  *
- * Since all invalid capacities appear before all valid capacities,
- * we can binary search to locate the first valid capacity.
- * Our goal is to find the first valid capacity.
+ * Our goal is to find the LAST index where missing < k (call it h).
+ * Everything past that index has already "crossed" k missing numbers.
  *
  * SEARCH SPACE:
- * low  = maximum element in weights
- * high = sum of all elements in weights
-
- * CHECKER FUNCTION:
- * For every candidate capacity,
- *      walk through weights in order, keeping a running_sum.
- *      If running_sum > capacity, that package starts a NEW day —
- *      carry its own weight forward as running_sum (don't drop it).
- *      act_days starts at 1 (day 1 begins the moment the first
- *      package is loaded).
+ * low  = 0
+ * high = arr.size() - 1
  *
- * If act_days <= days,
- *      capacity is valid, and it may still be the answer (don't discard it).
- *      We try to search for a better (smaller) capacity by moving
- *      high down to mid, since the minimum is asked.
- * Otherwise,
- *      capacity is invalid. Too many days were needed, so we should
- *      increase the capacity to reduce days further -> move low past mid.
+ * CHECKER (inline, no separate function needed):
+ * For every candidate index m,
+ *      missing = arr[m] - (m + 1)
  *
- * BINARY SEARCH TEMPLATE (preferred style: while(low < high), high = mid):
+ * If missing < k,
+ *      not enough numbers have gone missing yet by index m,
+ *      so the answer lies further right -> low = m + 1
+ * Otherwise (missing >= k),
+ *      we've already crossed k missing numbers by index m,
+ *      so the answer is at or before m -> high = m - 1
  *
- * while(low < high){
- *      if(capacity works){
- *          high = mid;        // keep mid, it may still be the answer
+ * BINARY SEARCH TEMPLATE (this one uses low <= high, since we're
+ * narrowing toward a final POSITION rather than a final VALUE):
+ *
+ * while(low <= high){
+ *      if(missing < k){
+ *          low = mid + 1;      // push right, not enough missing yet
  *      }
  *      else{
- *          low = mid + 1;     // discard mid, it is invalid
+ *          high = mid - 1;     // pull left, mid already crossed k
  *      }
  * }
- * return low;
+ * return k + high + 1;
  *
- * Time Complexity: O(n log(sum(weights) - max(weights)))
- *      Binary search performs log(high - low) iterations.
- *      Each iteration scans all elements once for calculating the
- *      days needed for that capacity.
+ * WHY THE FINAL FORMULA WORKS: k + high + 1
+ * - When the loop ends, high = last index where missing < k.
+ * - That means among the natural numbers 1, 2, 3, ..., the first
+ *   (high + 1) of arr's elements are "accounted for" (not missing).
+ * - So the boundary point on the number line is (high + 1).
+ * - From that boundary, we still need to walk forward exactly k more
+ *   missing numbers to reach the kth one overall.
+ * - answer = boundary + k = (high + 1) + k = k + high + 1
+ *
+ * Time Complexity: O(log n)
+ *      Binary search over array indices only — no inner loop, unlike
+ *      Ship Capacity / Koko which scan the array at every step depending on the checking condition in every question 
  *
  * Space Complexity: O(1)
- * no extra space is been used that is chainging based on our array input
+ * only pointers used, no extra space scales with input
  */
 
 class Solution {
 public:
-    int shipWithinDays(vector<int>& weights, int days) {
+    int findKthPositive(vector<int>& arr, int k) {
 
-        int low = *max_element(weights.begin(), weights.end());
-        int high = accumulate(weights.begin(), weights.end(), 0);
+        int low = 0;
+        int high = arr.size() - 1;
 
-        while (low < high) {
+        while (low <= high) {
 
             int mid = low + (high - low) / 2;
 
-            int running_sum = 0;
-            int act_days = 1;
-            // act_days starts at 1, not 0: day 1 begins the moment
-            // the first package is loaded.
+            int missing = arr[mid] - (mid + 1);
 
-            for (int w : weights) {
-                running_sum += w;
-                if (running_sum > mid) {
-                    running_sum = w;
-                    // carry THIS package's weight into the new day,
-                    // don't reset to 0 or its weight vanishes
-                    act_days += 1;
-                }
-            }
-
-            if (act_days <= days) {
-                // mid works.
-                // Keep mid in the search space, try finding an even
-                // smaller valid capacity.
-                high = mid;
-            } else {
-                // mid doesn't work.
-                // Every value <= mid is also invalid, safe to discard mid.
+            if (missing < k) {
+                // not enough missing yet, push search right
                 low = mid + 1;
+            } else {
+                // already crossed k missing, pull search left
+                high = mid - 1;
             }
         }
 
-        return low;
+        return k + high + 1;
     }
 };
 
 /*
  * DRY RUN
  *
- * weights = [1,2,3,4,5,6,7,8,9,10]
- * days = 5
+ * arr = [2, 3, 4, 7, 11], k = 5
  *
- * low = max = 10, high = sum = 55
+ * low = 0, high = 4
  *
- * mid = 32
- * running through weights, capacity 32 easily fits everything in
- * very few days -> act_days small -> valid -> high = 32
- * (binary search keeps narrowing...)
+ * mid = 2 -> arr[2] = 4, missing = 4 - 3 = 1 -> 1 < 5 -> low = 3
+ * low = 3, high = 4
+ * mid = 3 -> arr[3] = 7, missing = 7 - 4 = 3 -> 3 < 5 -> low = 4
+ * low = 4, high = 4
+ * mid = 4 -> arr[4] = 11, missing = 11 - 5 = 6 -> 6 >= 5 -> high = 3
+ * low = 4, high = 3 -> loop ends (low > high)
  *
- * Eventually candidate mid = 15:
- * running_sum: 1,3,6,10,15(ok),21(>15! new day=6),13,21(>15! new day=8),
- *              17(>15! new day=9),19(>15! new day=10)
- * act_days = 5 -> valid (5 <= 5) -> high = 15
- *
- * Eventually low = high = 15
- * loop ends -> Answer = 15
+ * Answer = k + high + 1 = 5 + 3 + 1 = 9
+ * Manual check: missing numbers are 1,5,6,8,9,10,...
+ * 5th missing number = 9 ✅
  */
 
 /*
- * NOTES — same pattern family as Smallest Divisor (LC 1283):
- * 1. low is NOT the minimum element here (unlike a naive first guess) —
- *    it's max(weights), because a single package can never be split.
- *    Compare to Smallest Divisor, where low = 1 is always valid (just
- *    slow); here, capacity below max(weights) is impossible outright.
- * 2. running_sum must carry the overflowing package's weight forward
- *    (running_sum = w), not reset to 0 — otherwise that package's
- *    weight silently disappears from the simulation.
- * 3. high = mid (not mid - 1) for the same reason as Smallest Divisor:
- *    mid might be the final answer, so it can't be discarded while
- *    still valid. while(low < high) handles convergence without
- *    needing any +-1 on the valid branch.
+ * NOTES — how this differs from Ship Capacity / Smallest Divisor:
+ * 1. Here we binary search over INDICES of arr, not over a range of
+ *    candidate VALUES (capacity/divisor). The "value" we eventually
+ *    return is computed using a formula AFTER the loop ends, not
+ *    returned directly as low/high.
+ * 2. Template uses while(low <= high) with high = mid - 1 / low = mid + 1,
+ *    not while(low < high) with high = mid. That's because we are
+ *    not converging on a valid index itself — we're converging on a
+ *    boundary, then using high (which ends up one step OUTSIDE the
+ *    loop's valid range) to compute the final answer.
+ * 3. No inner loop / no checker function — the "cost" of checking a
+ *    candidate is O(1) here (just one subtraction), unlike Ship
+ *    Capacity where checking a candidate costs O(n).
+ * 4. Edge case worth tracing by hand: when k is small enough that the
+ *    answer lies BEFORE arr[0] even starts contributing missing
+ *    numbers. Try arr = [5,6,7,8], k = 3 — high will end at -1, and
+ *    the formula k + high + 1 = 3 + (-1) + 1 = 3 still holds, since
+ *    1, 2, 3 are the first three missing positives.
  */
